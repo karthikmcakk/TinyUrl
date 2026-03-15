@@ -31,12 +31,30 @@ app.MapPost("/api/urls", async (AppDbContext db, ShortCodeService shortCodeServi
     {
         return Results.BadRequest("Invalid URL format.");
     }
-    var shortCode = shortCodeService.GenerateShortCode();
+    // check the original Url already exists
+    var existingUrl = await db.Urls.FirstOrDefaultAsync(uu => uu.OriginalUrl == request.OriginalUrl);
+    if(existingUrl != null)
+    {
+        return Results.Ok(new
+        {
+            existingUrl.Id,
+            existingUrl.ShortCode,
+            message = "URL already shortened",
+        });
+    }
+    // Generate unique shortcode
+    string shortCode = string.Empty;
+    do
+    {
+        shortCode = shortCodeService.GenerateShortCode();
+    }
+    while (await db.Urls.AnyAsync(u => u.ShortCode == shortCode));
     var url = new Url
     {
         OriginalUrl = request.OriginalUrl,
         ShortCode = shortCode,
         IsPrivate = request.IsPrivate
+        //message = "Short URL created successfully",
     };
     db.Urls.Add(url);
     await db.SaveChangesAsync();
