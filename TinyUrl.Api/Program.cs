@@ -52,4 +52,14 @@ app.MapGet("/{code}", async (string code, AppDbContext db) =>
 });
 #endregion
 
+#region Get all url
+app.MapGet("/api/urls", async (AppDbContext db) =>
+{
+    var urls = await db.Urls
+    .OrderByDescending(u=>u.CreatedAt)
+    .ToListAsync();
+    return Results.Ok(urls);
+});
+#endregion
+
 app.Run();
