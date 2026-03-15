@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using TinyUrl.Api.Data;
 using TinyUrl.Api.Models;
 using TinyUrl.Api.Services;
@@ -74,6 +75,22 @@ app.MapGet("api/urls/{Code}", async (string code, AppDbContext db) =>
     return Results.Ok(url);
 });
 
+#endregion
+
+#region Delete the shotcode
+app.MapDelete("api/urls/{code}", async (string code, AppDbContext db) =>
+{
+    var url = await db.Urls.FirstOrDefaultAsync(u => u.ShortCode == code);
+    if (url == null)
+    {
+        return Results.NotFound("URL not Found");
+    }
+    db.Urls.Remove(url);
+    await db.SaveChangesAsync();
+
+    return Results.Ok("Url deleted successfully");
+
+});
 #endregion
 
 app.Run();
