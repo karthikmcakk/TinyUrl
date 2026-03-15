@@ -62,4 +62,18 @@ app.MapGet("/api/urls", async (AppDbContext db) =>
 });
 #endregion
 
+#region GetSingleShortcode Details
+app.MapGet("api/urls/{Code}", async (string code, AppDbContext db) =>
+{
+    var url = await db.Urls.FirstOrDefaultAsync(u => u.ShortCode == code);
+
+    if (url == null)
+    {
+        return Results.NotFound();
+    }
+    return Results.Ok(url);
+});
+
+#endregion
+
 app.Run();
