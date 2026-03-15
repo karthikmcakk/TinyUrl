@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TinyUrl.Api.Data;
+using TinyUrl.Api.Models;
+using TinyUrl.Api.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,10 +11,45 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=tinyurl.db"));
+builder.Services.AddScoped<ShortCodeService>();
 
 var app = builder.Build();
 
 
 app.MapGet("/", () => "Tiny URL API Running");
+#region Main endpoint code
+app.MapPost("/api/urls", async (AppDbContext db, ShortCodeService shortCodeService, Url request) =>
+{
+    if (!Uri.IsWellFormedUriString(request.OriginalUrl, UriKind.Absolute))
+    {
+        return Results.BadRequest("Invalid URL format.");
+    }
+    var shortCode = shortCodeService.GenerateShortCode();
+    var url = new Url
+    {
+        OriginalUrl = request.OriginalUrl,
+        ShortCode = shortCode,
+        IsPrivate = request.IsPrivate
+    };
+    db.Urls.Add(url);
+    await db.SaveChangesAsync();
+    return Results.Ok(new { url.Id, url.ShortCode });
+});
+#endregion
+
+#region Redirct url from DB
+app.MapGet("/{code}", async (string code, AppDbContext db) =>
+{
+    var url = await db.Urls.FirstOrDefaultAsync(x => x.ShortCode == code);
+
+    if (url == null)
+        return Results.NotFound();
+
+    url.Clicks++;
+    await db.SaveChangesAsync();
+
+    return Results.Redirect(url.OriginalUrl);
+});
+#endregion
 
 app.Run();
